@@ -1,25 +1,46 @@
-name: Build Android APK
+name: Build APK from ZIP
+
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+
+      - name: Extract bubble-grid-arcade.zip
+        run: |
+          mkdir -p extracted_src
+          unzip -q bubble-grid-arcade.zip -d extracted_src
+          ls -la extracted_src
+
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
-      - name: Upload APK
+        run: |
+          GRADLE_DIR=$(find extracted_src -name "gradlew" -type f -exec dirname {} \; | head -n 1)
+          if [ -z "$GRADLE_DIR" ]; then
+            GRADLE_DIR=$(find extracted_src -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
+            echo "gradlew not found, using dir: $GRADLE_DIR"
+            cd "$GRADLE_DIR"
+            gradle assembleDebug
+          else
+            echo "Using Gradle root: $GRADLE_DIR"
+            cd "$GRADLE_DIR"
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          fi
+
+      - name: Upload built APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
-          
+          name: app-debug-apk
+          path: extracted_src/**/app/build/outputs/apk/debug/*.apk
