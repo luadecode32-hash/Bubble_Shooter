@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -22,21 +22,29 @@ jobs:
         run: |
           mkdir -p extracted_src
           unzip -q bubble-grid-arcade.zip -d extracted_src
-          ls -la extracted_src
 
-      - name: Build Debug APK
+      - name: Generate debug.keystore & Build APK
         run: |
-          GRADLE_DIR=$(find extracted_src -name "gradlew" -type f -exec dirname {} \; | head -n 1)
-          if [ -z "$GRADLE_DIR" ]; then
-            GRADLE_DIR=$(find extracted_src -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
-            echo "gradlew not found, using dir: $GRADLE_DIR"
-            cd "$GRADLE_DIR"
-            gradle assembleDebug
-          else
-            echo "Using Gradle root: $GRADLE_DIR"
-            cd "$GRADLE_DIR"
+          GRADLE_DIR=$(find extracted_src -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
+          cd "$GRADLE_DIR"
+
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          if [ -f gradlew ]; then
             chmod +x gradlew
-            ./gradlew assembleDebug
+            ./gradlew assembleDebug || { cat app/build.gradle.kts; exit 1; }
+          else
+            gradle assembleDebug || { cat app/build.gradle.kts; exit 1; }
           fi
 
       - name: Upload built APK
