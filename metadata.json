@@ -1,6 +1,0 @@
-{
-  "name": "Bubble Pop",
-  "description": "Arcade HTML5 Canvas Bubble Shooter with hexagonal grid physics, wall-bounce aiming, BFS cluster pops, floating avalanches, ceiling drop tension, and Web Audio sound effects.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
